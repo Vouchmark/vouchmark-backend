@@ -505,7 +505,7 @@ app.get("/dashboard/company-details", authMiddleware, async (req, res) => {
     user_company: company,
   });
 });
-
+-
 // Authorization API
 app.post("/vouch/api/vauth/signup", async (req, res) => {
   const { name, email, password, confirmPassword } = req.body;
@@ -3046,7 +3046,7 @@ app.post(
   ]),
   async (req, res) => {
     try {
-      const { companyId } = req.body;
+      const { companyId, isLatest = true } = req.body;
       const cacertFile = req.files.cacert ? req.files.cacert[0] : null;
       const cacReportFile = req.files.cacReport ? req.files.cacReport[0] : null;
 
@@ -3067,7 +3067,7 @@ app.post(
       let cacReportVerified = data.cacreport_verified || false;
 
       if (cacertFile) {
-        const systemFilePath = path.join(__dirname, "reference_cac_doc.pdf");
+        const systemFilePath = path.join(__dirname, isLatest ? "reference_cac_doc.pdf" : "reference_cac_doc_prev.pdf");
         if (!fs.existsSync(systemFilePath)) {
           return res.status(500).json({ error: "Reference file not found" });
         }
@@ -3149,7 +3149,7 @@ MANDATE:
         await deleteFile(cacertFile.path);
       }
 
-      if (cacReportFile) {
+      if (cacReportFile && isLatest) {
         const systemFilePath = path.join(
           __dirname,
           "reference_cac_status_doc.pdf"
@@ -3212,6 +3212,8 @@ MANDATE:
           ...imageParts,
         ]);
 
+        console.log(generatedContent.response.text());
+
         if (!generatedContent || generatedContent.error) {
           throw new Error("Failed to verify the uploaded document.");
         }
@@ -3232,6 +3234,9 @@ MANDATE:
           "cac_report"
         );
         await deleteFile(cacReportFile.path);
+      } else if (!isLatest) {
+        // If not latest, automatically set CAC report as verified
+        cacReportVerified = true;
       }
 
       let verified = true;
